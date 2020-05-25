@@ -3,6 +3,7 @@ const leftMenu = document.querySelector('.left-menu'),
       hamburger = document.querySelector('.hamburger'),
       tvCardImg = document.querySelectorAll('.tv-card__img');
 
+// Меню (открытие, закрытие и др.)
 hamburger.addEventListener('click', () => {
   leftMenu.classList.toggle('openMenu');
   hamburger.classList.toggle('open');
@@ -25,6 +26,7 @@ leftMenu.addEventListener('click', event => {
   }
 });
 
+// Смена изображения при наведении
 tvCardImg.forEach((elem) => {
   const src = elem.src;
   elem.addEventListener('mouseenter', () => {
