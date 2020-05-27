@@ -1,7 +1,63 @@
 'use strict';
+const IMG_URL = 'https://image.tmdb.org/t/p/w185_and_h278_bestv2';
+const API_KEY = 'f827fc972e4e548f3b85d8a8349b966f';
+
 const leftMenu = document.querySelector('.left-menu'),
       hamburger = document.querySelector('.hamburger'),
-      tvCardImg = document.querySelectorAll('.tv-card__img');
+      tvShowsList = document.querySelector('.tv-shows__list'),
+      modal = document.querySelector('.modal');
+      
+
+const DBService = class {
+  getData = async (url) => {
+    const res = await fetch(url);
+    if (res.ok) {
+      return res.json();
+    } else {
+      throw new Error(`Not enought data from : ${url}`);
+    }
+  }
+  getTestData = async () => {
+    return await this.getData('test.json')
+  }
+}
+
+const renderCard = response => {
+  console.log(response);
+  tvShowsList.textContent = '';
+  response.results.forEach(item => {
+    const { 
+      name: title,
+      vote_average: rating,
+      poster_path: poster,
+      backdrop_path: backdrop
+     } = item;
+    
+    const posterIMG = poster ? IMG_URL + poster : backdrop ? IMG_URL + backdrop : 'img/no-poster.jpg';
+    const backdropIMG = backdrop ? IMG_URL + backdrop : '';
+    const ratingElem = rating === 0 ? '' : `<span class="tv-card__vote">${rating}</span>`;
+
+    
+    const card = document.createElement('li');
+    card.className = 'tv-shows__item';
+    card.innerHTML = `
+      <a href="#" class="tv-card">
+        ${ratingElem}
+        <img class="tv-card__img"
+          src="${posterIMG}"
+          data-backdrop="${backdropIMG}"
+          alt="${title}">
+        <h4 class="tv-card__head">${title}</h4>
+      </a>
+    `;
+
+    tvShowsList.append(card);
+  });
+
+};
+
+new DBService().getTestData().then(renderCard);
+      
 
 // Меню (открытие, закрытие и др.)
 hamburger.addEventListener('click', () => {
@@ -26,13 +82,35 @@ leftMenu.addEventListener('click', event => {
   }
 });
 
-// Смена изображения при наведении
-tvCardImg.forEach((elem) => {
-  const src = elem.src;
-  elem.addEventListener('mouseenter', () => {
-    elem.src = elem.getAttribute('data-backdrop');
-  });
-  elem.addEventListener('mouseleave', () => {
-    elem.src = src;
-  });
+// Открытие модального окна
+tvShowsList.addEventListener('click', event => {
+  event.preventDefault();
+  const target = event.target;
+  const card = target.closest('.tv-card');
+  if (card) {
+    document.body.style.overflow = 'hidden';
+    modal.classList.remove('hide');
+  }
 });
+
+// Закрытие модального окна
+modal.addEventListener('click', event => {
+  if (event.target.closest('.cross') || event.target.classList.contains('modal')) {
+    document.body.style.overflow = '';
+    modal.classList.add('hide');
+  }
+});
+
+// Смена изображения при наведении
+const changeImage = event => {
+  const card = event.target.closest('.tv-shows__item');
+  if (card) {
+    const img = card.querySelector('.tv-card__img');
+    if (img.dataset.backdrop) {
+      [img.src, img.dataset.backdrop] = [img.dataset.backdrop, img.src];
+    }
+  }
+};
+
+tvShowsList.addEventListener('mouseover', changeImage);
+tvShowsList.addEventListener('mouseout', changeImage);
