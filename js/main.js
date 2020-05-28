@@ -95,6 +95,7 @@ const renderCard = response => {
 
 };
 
+// Поиск
 searchForm.addEventListener('submit', event => {
   event.preventDefault();
   const value = searchFormInput.value.toLowerCase().trim();
