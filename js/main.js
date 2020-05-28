@@ -1,14 +1,34 @@
 'use strict';
 const IMG_URL = 'https://image.tmdb.org/t/p/w185_and_h278_bestv2';
-const API_KEY = 'f827fc972e4e548f3b85d8a8349b966f';
 
 const leftMenu = document.querySelector('.left-menu'),
       hamburger = document.querySelector('.hamburger'),
       tvShowsList = document.querySelector('.tv-shows__list'),
-      modal = document.querySelector('.modal');
+      modal = document.querySelector('.modal'),
+      tvShows = document.querySelector('.tv-shows'),
+      tvCardImg = document.querySelector('.tv-card__img'),
+      modalTitle = document.querySelector('.modal__title'),
+      genresList = document.querySelector('.genres-list'),
+      rating = document.querySelector('.rating'),
+      description = document.querySelector('.description'),
+      modalLink = document.querySelector('.modal__link'),
+      preloader = document.querySelector('.preloader'),
+      searchForm = document.querySelector('.search__form'),
+      searchFormInput = document.querySelector('.search__form-input'),
+      tvShowsHead = document.querySelector('.tv-shows__head');
       
+const loading = document.createElement('div');
+loading.className = 'loading';
+tvShowsHead.textContent = '';
+
 
 const DBService = class {
+
+  constructor() {
+    this.SERVER = 'https://api.themoviedb.org/3';
+    this.API_KEY = 'f827fc972e4e548f3b85d8a8349b966f';
+  }
+
   getData = async (url) => {
     const res = await fetch(url);
     if (res.ok) {
@@ -17,47 +37,74 @@ const DBService = class {
       throw new Error(`Not enought data from : ${url}`);
     }
   }
-  getTestData = async () => {
-    return await this.getData('test.json')
+  getTestData = () => {
+    return this.getData('test.json');
+  }
+
+  getTestCard = () => {
+    return this.getData('card.json');
+  }
+
+  getSearchResult = query => {
+    return this.getData(`${this.SERVER}/search/tv?api_key=${this.API_KEY}&query=${query}&language=ru-RU`);
+  }
+
+  getTvShow = id => {
+    return this.getData(`${this.SERVER}/tv/${id}?api_key=${this.API_KEY}&language=ru-RU`);
   }
 }
 
 const renderCard = response => {
-  console.log(response);
   tvShowsList.textContent = '';
-  response.results.forEach(item => {
-    const { 
-      name: title,
-      vote_average: rating,
-      poster_path: poster,
-      backdrop_path: backdrop
-     } = item;
-    
-    const posterIMG = poster ? IMG_URL + poster : backdrop ? IMG_URL + backdrop : 'img/no-poster.jpg';
-    const backdropIMG = backdrop ? IMG_URL + backdrop : '';
-    const ratingElem = rating === 0 ? '' : `<span class="tv-card__vote">${rating}</span>`;
-
-    
-    const card = document.createElement('li');
-    card.className = 'tv-shows__item';
-    card.innerHTML = `
-      <a href="#" class="tv-card">
-        ${ratingElem}
-        <img class="tv-card__img"
-          src="${posterIMG}"
-          data-backdrop="${backdropIMG}"
-          alt="${title}">
-        <h4 class="tv-card__head">${title}</h4>
-      </a>
-    `;
-
-    tvShowsList.append(card);
-  });
+  if (response.results.length > 0) {
+    tvShowsHead.textContent = 'Результат поиска';
+    response.results.forEach(item => {
+      const { 
+        name: title,
+        vote_average: vote,
+        poster_path: poster,
+        backdrop_path: backdrop,
+        id,
+       } = item;
+      
+      const posterIMG = poster ? IMG_URL + poster : backdrop ? IMG_URL + backdrop : 'img/no-poster.jpg';
+      const backdropIMG = backdrop ? IMG_URL + backdrop : '';
+      const voteElem = vote ? `<span class="tv-card__vote">${vote}</span>` : '';
+  
+      
+      const card = document.createElement('li');
+      card.className = 'tv-shows__item';
+      card.innerHTML = `
+        <a href="#" id="${id}" class="tv-card">
+          ${voteElem}
+          <img class="tv-card__img"
+            src="${posterIMG}"
+            data-backdrop="${backdropIMG}"
+            alt="${title}">
+          <h4 class="tv-card__head">${title}</h4>
+        </a>
+      `;
+  
+      loading.remove();
+      tvShowsList.append(card);
+    });
+  } else {
+    tvShowsHead.textContent = 'По вашему запросу ничего не найдено!';
+    loading.remove();
+  }
 
 };
 
-new DBService().getTestData().then(renderCard);
-      
+searchForm.addEventListener('submit', event => {
+  event.preventDefault();
+  const value = searchFormInput.value.toLowerCase().trim();
+
+  if (value) {
+    tvShows.append(loading);
+    new DBService().getSearchResult(value).then(renderCard);
+  }
+  searchFormInput.value = '';
+});
 
 // Меню (открытие, закрытие и др.)
 hamburger.addEventListener('click', () => {
@@ -73,6 +120,7 @@ document.addEventListener('click', event => {
 });
 
 leftMenu.addEventListener('click', event => {
+  event.preventDefault();
   const target = event.target;
   const dropdown = target.closest('.dropdown');
   if (dropdown) {
@@ -87,9 +135,29 @@ tvShowsList.addEventListener('click', event => {
   event.preventDefault();
   const target = event.target;
   const card = target.closest('.tv-card');
+
   if (card) {
-    document.body.style.overflow = 'hidden';
-    modal.classList.remove('hide');
+    preloader.style.display = 'block';
+    new DBService().getTvShow(card.id)
+      .then(({ poster_path: posterPath, name: title, genres, vote_average: voteAverage, overview, homepage }) => {
+        tvCardImg.src = IMG_URL + posterPath;
+        tvCardImg.alt = title;
+        modalTitle.textContent = title;
+        
+        genresList.textContent = '';
+        for (const item of genres) {
+          genresList.innerHTML += `<li>${item.name}</li>`;
+        }
+        
+        rating.textContent = voteAverage;
+        description.textContent = overview;
+        modalLink.href = homepage;
+      })
+      .then(() => {
+        preloader.style.display = '';
+        document.body.style.overflow = 'hidden';
+        modal.classList.remove('hide');
+      });
   }
 });
 
